@@ -1,14 +1,14 @@
-[providers]
-  providers = ["node"]
-
-[phases.setup]
-nixPkgs = ["nodejs_22"]
+[variables]
+NODE_VERSION = "22"
 
 [phases.install]
 cmds = ["npm install -g pnpm@10 && pnpm install --no-frozen-lockfile"]
 
 [phases.build]
-cmds = ["BASE_PATH=/ PORT=3000 pnpm --filter @workspace/luxury-app run build", "pnpm --filter @workspace/api-server run build"]
+cmds = [
+  "BASE_PATH=/ PORT=3000 pnpm --filter @workspace/luxury-app run build",
+  "pnpm --filter @workspace/api-server run build"
+]
 
 [start]
 cmd = "node --enable-source-maps artifacts/api-server/dist/index.mjs"
