@@ -8,4 +8,4 @@ cmds = [
 ]
 
 [start]
-cmd = "node --enable-source-maps artifacts/api-server/dist/index.mjs"
+cmd = "pnpm --filter @workspace/db run push --force && node --enable-source-maps artifacts/api-server/dist/index.mjs"
