@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: MH Interior Design API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Customer authentication
+  - name: bookings
+    description: Consultation booking operations
+  - name: reviews
+    description: Review moderation operations
+  - name: contacts
+    description: Contact form operations
+  - name: admin
+    description: Admin authentication
+  - name: chat
+    description: AI chat assistant operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,584 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Customer Auth ────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new customer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Customer login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordChangeInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerUser"
+
+  # ── Bookings ────────────────────────────────────────────────────────────────
+  /bookings/slots:
+    get:
+      operationId: getAvailableSlots
+      tags: [bookings]
+      summary: Get available time slots for a date
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of available time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimeSlot"
+
+  /bookings/my:
+    get:
+      operationId: listMyBookings
+      tags: [bookings]
+      summary: List current user's bookings
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User's bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+
+  /bookings/verify/{consultationId}:
+    get:
+      operationId: verifyBooking
+      tags: [bookings]
+      summary: Verify booking by consultation ID (QR scan)
+      parameters:
+        - name: consultationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Booking verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingVerification"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List all bookings (admin)
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a new consultation booking (auth required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "409":
+          description: Time slot already booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{id}/status:
+    patch:
+      operationId: updateBookingStatus
+      tags: [bookings]
+      summary: Update booking status (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingStatusInput"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  # ── Reviews ─────────────────────────────────────────────────────────────────
+  /reviews/approved:
+    get:
+      operationId: listApprovedReviews
+      tags: [reviews]
+      summary: List approved reviews (public)
+      responses:
+        "200":
+          description: Approved reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+  /reviews:
+    get:
+      operationId: listReviews
+      tags: [reviews]
+      summary: List reviews — admin only (all statuses)
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+    post:
+      operationId: submitReview
+      tags: [reviews]
+      summary: Submit a new review (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Review submitted, pending moderation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /reviews/{id}/status:
+    patch:
+      operationId: updateReviewStatus
+      tags: [reviews]
+      summary: Approve or reject a review (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewStatusInput"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /reviews/{id}/pin:
+    patch:
+      operationId: toggleReviewPin
+      tags: [reviews]
+      summary: Pin or unpin a review (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewPinInput"
+      responses:
+        "200":
+          description: Pin toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /reviews/{id}:
+    delete:
+      operationId: deleteReview
+      tags: [reviews]
+      summary: Delete a review (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Contacts ─────────────────────────────────────────────────────────────────
+  /contacts:
+    get:
+      operationId: listContacts
+      tags: [contacts]
+      summary: List contact submissions (admin)
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: replied
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of contact messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contact"
+    post:
+      operationId: submitContact
+      tags: [contacts]
+      summary: Submit a contact form (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactInput"
+      responses:
+        "201":
+          description: Contact submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+
+  /contacts/{id}/replied:
+    patch:
+      operationId: markContactReplied
+      tags: [contacts]
+      summary: Mark a contact as replied (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as replied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+
+  /contacts/{id}:
+    delete:
+      operationId: deleteContact
+      tags: [contacts]
+      summary: Delete a contact message (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Admin Auth ───────────────────────────────────────────────────────────────
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCredentials"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminToken"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/verify:
+    get:
+      operationId: adminVerify
+      tags: [admin]
+      summary: Verify admin token
+      responses:
+        "200":
+          description: Token valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStatus"
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get admin dashboard stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List all customer accounts (admin)
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerUser"
+
+  /admin/users/{id}/lock:
+    patch:
+      operationId: lockUser
+      tags: [admin]
+      summary: Lock or unlock a user account (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLockInput"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerUser"
+
+  # ── Chat ─────────────────────────────────────────────────────────────────────
+  /chat:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message to the AI assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +621,363 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    CustomerUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+        isLocked:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, name, email, role, isLocked, createdAt]
+
+    RegisterInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        phone:
+          type: string
+      required: [name, email, password]
+
+    LoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/CustomerUser"
+        token:
+          type: string
+      required: [user, token]
+
+    PasswordChangeInput:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 6
+      required: [currentPassword, newPassword]
+
+    ProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+
+    UserLockInput:
+      type: object
+      properties:
+        isLocked:
+          type: boolean
+      required: [isLocked]
+
+    # ── Bookings ──────────────────────────────────────────────────────────────
+    TimeSlot:
+      type: object
+      required: [time, available]
+      properties:
+        time:
+          type: string
+        label:
+          type: string
+        available:
+          type: boolean
+
+    BookingInput:
+      type: object
+      required: [fullName, phone, email, service, preferredDate, timeSlot, budgetRange, projectLocation]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+          minLength: 10
+        email:
+          type: string
+          format: email
+        service:
+          type: string
+        preferredDate:
+          type: string
+        timeSlot:
+          type: string
+        budgetRange:
+          type: string
+        projectLocation:
+          type: string
+        message:
+          type: ["string", "null"]
+
+    Booking:
+      type: object
+      required: [id, consultationId, fullName, phone, email, service, preferredDate, timeSlot, budgetRange, projectLocation, status, createdAt]
+      properties:
+        id:
+          type: integer
+        consultationId:
+          type: string
+        userId:
+          type: ["integer", "null"]
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        service:
+          type: string
+        preferredDate:
+          type: string
+        timeSlot:
+          type: string
+        budgetRange:
+          type: string
+        projectLocation:
+          type: string
+        message:
+          type: ["string", "null"]
+        status:
+          type: string
+        qrCode:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    BookingVerification:
+      type: object
+      properties:
+        booking:
+          $ref: "#/components/schemas/Booking"
+        verified:
+          type: boolean
+      required: [booking, verified]
+
+    BookingStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    # ── Reviews ───────────────────────────────────────────────────────────────
+    ReviewInput:
+      type: object
+      required: [name, rating, message]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        message:
+          type: string
+          minLength: 10
+        photoUrl:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+
+    Review:
+      type: object
+      required: [id, name, rating, message, status, isPinned, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rating:
+          type: integer
+        message:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        status:
+          type: string
+        isPinned:
+          type: boolean
+        createdAt:
+          type: string
+
+    ReviewStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    ReviewPinInput:
+      type: object
+      required: [isPinned]
+      properties:
+        isPinned:
+          type: boolean
+
+    # ── Contacts ──────────────────────────────────────────────────────────────
+    ContactInput:
+      type: object
+      required: [name, phone, email, service, message]
+      properties:
+        name:
+          type: string
+          minLength: 2
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        service:
+          type: string
+        message:
+          type: string
+          minLength: 5
+
+    Contact:
+      type: object
+      required: [id, name, phone, email, service, message, isReplied, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        service:
+          type: string
+        message:
+          type: string
+        isReplied:
+          type: boolean
+        createdAt:
+          type: string
+
+    # ── Admin ─────────────────────────────────────────────────────────────────
+    AdminCredentials:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+
+    AdminToken:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    AdminStatus:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+
+    AdminDashboard:
+      type: object
+      properties:
+        totalBookings:
+          type: integer
+        pendingBookings:
+          type: integer
+        confirmedBookings:
+          type: integer
+        completedBookings:
+          type: integer
+        rejectedBookings:
+          type: integer
+        totalUsers:
+          type: integer
+        totalReviews:
+          type: integer
+        pendingReviews:
+          type: integer
+        unreadMessages:
+          type: integer
+        recentBookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+      required: [totalBookings, pendingBookings, confirmedBookings, completedBookings, rejectedBookings, totalUsers, totalReviews, pendingReviews, unreadMessages, recentBookings]
+
+    # ── Chat ─────────────────────────────────────────────────────────────────
+    ChatInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatHistoryItem"
+
+    ChatHistoryItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+
+    ChatResponse:
+      type: object
+      required: [reply]
+      properties:
+        reply:
+          type: string
