@@ -24,7 +24,7 @@ if (Number.isNaN(port) || port <= 0) {
 app.use(express.static(path.join(__dirname, "../../luxury-app/dist")));
 
 // Catch-all for SPA routing
-app.get("*", (req, res) => {
+app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "../../luxury-app/dist/index.html"));
 });
 
