@@ -1,8 +1,5 @@
-[variables]
-NODE_VERSION = "22"
-
 [phases.install]
-cmds = ["corepack enable pnpm && pnpm install --no-frozen-lockfile"]
+cmds = ["npm install -g pnpm@10.26.1 && pnpm install --no-frozen-lockfile"]
 
 [phases.build]
 cmds = [
