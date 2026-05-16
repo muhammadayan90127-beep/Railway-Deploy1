@@ -10,6 +10,8 @@ export const usersTable = pgTable("users", {
   phone: text("phone"),
   role: text("role").notNull().default("customer"),
   isLocked: boolean("is_locked").notNull().default(false),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

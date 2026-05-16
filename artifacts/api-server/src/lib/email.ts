@@ -68,3 +68,20 @@ export async function sendNewUserEmail(user: { name: string; email: string }) {
     const _r = getResend(); if (_r) await _r.emails.send({ from: FROM_EMAIL, to: ADMIN_EMAIL, subject: `New Customer — ${user.name}`, html: luxuryTemplate("New Customer Registered", body) });
   } catch (err) { logger.error({ err }, "Failed to send new user email"); }
 }
+
+export async function sendPasswordResetEmail(user: { name: string; email: string }, token: string) {
+  const resetUrl = `${BASE_URL}/login?reset_token=${token}`;
+  const body = `<p style="color:#9a8a6a;font-size:14px;margin:0 0 24px;font-family:'Arial',sans-serif;">We received a request to reset your password. Click the button below to set a new password. This link expires in <strong style="color:#c9a96e;">1 hour</strong>.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #1e2128;">${infoRow("Name", user.name)}${infoRow("Email", user.email)}</table><div style="margin-top:32px;text-align:center;"><a href="${resetUrl}" style="display:inline-block;background:#c9a96e;color:#0d0f12;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:13px;font-weight:600;letter-spacing:1px;font-family:'Arial',sans-serif;">RESET MY PASSWORD</a></div><p style="color:#4a4a5a;font-size:12px;margin:24px 0 0;font-family:'Arial',sans-serif;text-align:center;">If you didn't request this, you can safely ignore this email.</p>`;
+  try {
+    const _r = getResend();
+    if (_r) await _r.emails.send({ from: FROM_EMAIL, to: user.email, subject: "Reset Your Password — MH Interior Design", html: luxuryTemplate("Password Reset Request", body) });
+  } catch (err) { logger.error({ err }, "Failed to send password reset email"); }
+}
+
+export async function sendNewsletterConfirmationEmail(email: string) {
+  const body = `<p style="color:#9a8a6a;font-size:14px;margin:0 0 24px;font-family:'Arial',sans-serif;">Thank you for subscribing to our newsletter! You'll receive exclusive design inspiration, project updates, and special offers from MH Interior Design.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #1e2128;">${infoRow("Subscribed Email", email)}</table><div style="margin-top:32px;text-align:center;"><a href="${BASE_URL}" style="display:inline-block;background:#c9a96e;color:#0d0f12;text-decoration:none;padding:12px 28px;border-radius:6px;font-size:13px;font-weight:600;letter-spacing:1px;font-family:'Arial',sans-serif;">EXPLORE OUR PORTFOLIO</a></div>`;
+  try {
+    const _r = getResend();
+    if (_r) await _r.emails.send({ from: FROM_EMAIL, to: email, subject: "Welcome to MH Interior Design Newsletter", html: luxuryTemplate("You're Subscribed!", body) });
+  } catch (err) { logger.error({ err }, "Failed to send newsletter confirmation email"); }
+}

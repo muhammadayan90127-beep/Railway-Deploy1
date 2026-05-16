@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaInstagram, FaFacebookF, FaYoutube } from 'react-icons/fa';
+import { Loader2 } from 'lucide-react';
+
+const BASE_PATH = (import.meta.env.BASE_URL ?? '').replace(/\/$/, '');
 
 export const Footer: React.FC = () => {
   const scrollTo = (href: string) => { document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' }); };
+  const [nlEmail, setNlEmail] = useState("");
+  const [nlStatus, setNlStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [nlMessage, setNlMessage] = useState("");
+
+  const handleNewsletter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nlEmail) return;
+    setNlStatus("loading");
+    try {
+      const res = await fetch(`${BASE_PATH}/api/newsletter/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: nlEmail }),
+      });
+      const data = await res.json();
+      if (res.ok) { setNlStatus("success"); setNlMessage(data.message); setNlEmail(""); }
+      else { setNlStatus("error"); setNlMessage(data.error ?? "Something went wrong"); }
+    } catch {
+      setNlStatus("error"); setNlMessage("Network error. Please try again.");
+    }
+  };
 
   return (
     <footer className="bg-background pt-20 pb-8 border-t border-primary/20 relative">
@@ -45,10 +69,19 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="font-serif font-bold text-foreground mb-6 text-lg">Newsletter</h4>
             <p className="font-sans text-sm text-foreground/60 mb-4">Subscribe for design inspiration and updates.</p>
-            <form className="flex" onSubmit={(e) => e.preventDefault()}>
-              <input type="email" placeholder="Your email address" className="bg-card border border-border px-4 py-2 text-sm font-sans focus:outline-none focus:border-primary w-full text-foreground placeholder:text-foreground/40" />
-              <button type="submit" className="bg-primary text-primary-foreground px-4 font-sans text-sm hover:bg-primary/90 transition-colors">Subscribe</button>
-            </form>
+            {nlStatus === "success" ? (
+              <div className="bg-primary/10 border border-primary/30 px-4 py-3 text-sm font-sans text-primary">{nlMessage}</div>
+            ) : (
+              <form className="flex flex-col gap-2" onSubmit={handleNewsletter}>
+                <div className="flex">
+                  <input type="email" value={nlEmail} onChange={(e) => setNlEmail(e.target.value)} placeholder="Your email address" className="bg-card border border-border px-4 py-2 text-sm font-sans focus:outline-none focus:border-primary w-full text-foreground placeholder:text-foreground/40" disabled={nlStatus === "loading"} />
+                  <button type="submit" disabled={nlStatus === "loading"} className="bg-primary text-primary-foreground px-4 font-sans text-sm hover:bg-primary/90 transition-colors disabled:opacity-70 flex items-center gap-1">
+                    {nlStatus === "loading" ? <Loader2 size={14} className="animate-spin" /> : "Subscribe"}
+                  </button>
+                </div>
+                {nlStatus === "error" && <p className="text-xs text-destructive font-sans">{nlMessage}</p>}
+              </form>
+            )}
           </div>
         </div>
 

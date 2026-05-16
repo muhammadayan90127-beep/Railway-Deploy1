@@ -6,6 +6,7 @@ import reviewsRouter from "./reviews";
 import contactsRouter from "./contacts";
 import adminRouter from "./admin";
 import chatRouter from "./chat";
+import newsletterRouter from "./newsletter";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(reviewsRouter);
 router.use(contactsRouter);
 router.use(adminRouter);
 router.use(chatRouter);
+router.use(newsletterRouter);
 
 export default router;

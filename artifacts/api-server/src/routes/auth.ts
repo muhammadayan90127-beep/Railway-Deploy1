@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { db, usersTable } from "@workspace/db";
 import { signToken, requireAuth } from "../lib/auth";
-import { sendNewUserEmail } from "../lib/email";
+import { sendNewUserEmail, sendPasswordResetEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -76,6 +77,49 @@ router.post("/auth/change-password", requireAuth, async (req, res): Promise<void
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, userId));
   res.json({ message: "Password changed successfully" });
+});
+
+// POST /auth/forgot-password
+router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+  const { email } = req.body;
+  if (!email) { res.status(400).json({ error: "Email is required" }); return; }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase()));
+  // Always respond with success to avoid email enumeration
+  if (!user) { res.json({ message: "If this email exists, a reset link has been sent." }); return; }
+
+  const token = nanoid(48);
+  const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.update(usersTable).set({
+    passwordResetToken: token,
+    passwordResetExpiry: expiry,
+  }).where(eq(usersTable.id, user.id));
+
+  sendPasswordResetEmail(user, token).catch(() => {});
+  res.json({ message: "If this email exists, a reset link has been sent." });
+});
+
+// POST /auth/reset-password
+router.post("/auth/reset-password", async (req, res): Promise<void> => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) { res.status(400).json({ error: "token and newPassword are required" }); return; }
+  if (newPassword.length < 6) { res.status(400).json({ error: "Password must be at least 6 characters" }); return; }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.passwordResetToken, token));
+  if (!user || !user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+    res.status(400).json({ error: "Invalid or expired reset link. Please request a new one." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.update(usersTable).set({
+    passwordHash,
+    passwordResetToken: null,
+    passwordResetExpiry: null,
+  }).where(eq(usersTable.id, user.id));
+
+  res.json({ message: "Password reset successfully. You can now log in." });
 });
 
 // PATCH /auth/profile
